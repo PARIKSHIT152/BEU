@@ -36,18 +36,17 @@ app.post("/userBill", async (req,res)=>{
     for await (const doc of DB.user.find()) {
         let object = {};
         let noOfOrders = 0;
-        let BillValue = 0;
         let averageBillValue = 0;
 
         for await (const orderDoc of DB.order.find({userId:doc.userId})) {
 
             ++noOfOrders;
-            BillValue = BillValue + orderDoc.subtotal;
+            averageBillValue = averageBillValue + orderDoc.subtotal;
 
            }
         object.userId = doc.userId;
         object.name = doc.name; 
-        averageBillValue = parseInt(BillValue/noOfOrders);
+        averageBillValue = parseInt(averageBillValue/noOfOrders);
         object.noOfOrders = noOfOrders;
         object.averageBillValue = averageBillValue;
 

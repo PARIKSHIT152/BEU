@@ -1,40 +1,118 @@
 
-var express = require('express');
+var express = require("express");
+var mongoose = require("mongoose");
+var DB = require('./models/user.model');
 
 
+// Connect to MongoDB
+mongoose.connect("mongodb://localhost:27017/test", { useNewUrlParser: true });
+
+var PORT = 3001;
+
+// Initialize Express
 var app = express();
-var bodyParser = require('body-parser');
 
-var properties = require('./config/config');
-var db = require('./config/db');
-//auth routes
-var authRoutes = require('./routers/user.routes');
+// Parse request body as JSON
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
-//configure bodyparser
-var bodyParserJSON = bodyParser.json();
-var bodyParserURLEncoded = bodyParser.urlencoded({extended:true});
+// Make public static folder
+app.use(express.static("public"));
 
-//initialise express router
-var router = express.Router();
+// Routes
 
-// call the database connectivity function
-db();
+app.get("/", function(req, res) {
+  res.send("Hello from demo app!");
+});
 
 
-app.use(bodyParserJSON);
-app.use(bodyParserURLEncoded);
+//api to get the user bill 
 
+app.post("/userBill", async (req,res)=>{
+    try {
 
+    let finalobject = [];
 
+    for await (const doc of DB.user.find()) {
+        let object = {};
+        let noOfOrders = 0;
+        let BillValue = 0;
+        let averageBillValue = 0;
 
+        for await (const orderDoc of DB.order.find({userId:doc.userId})) {
 
+            ++noOfOrders;
+            BillValue = BillValue + orderDoc.subtotal;
 
-// use express router
-app.use('/api',router);
-authRoutes(router); 
+           }
+        object.userId = doc.userId;
+        object.name = doc.name; 
+        averageBillValue = parseInt(BillValue/noOfOrders);
+        object.noOfOrders = noOfOrders;
+        object.averageBillValue = averageBillValue;
 
+        finalobject.push(object)
+        
+        }
+         return  res.send(finalobject)
 
-// //call auth routing
-app.listen(properties.PORT, (req, res) => {
-    console.log(`Server is running on ${properties.PORT} port.`);
+        
+    } 
+    catch (error) {
+       return  res.send({status:false, message:"Technical error"})
+
+    }
+  });
+
+// api to update the order of each user in user collect
+
+  app.post("/updateUserOrders", async (req,res)=>{
+    try {
+            for await (const doc of DB.user.find()) {
+
+            let noOfOrders = 0;
+                for await (const orderDoc of DB.order.find({userId:doc.userId})) {
+
+                    ++noOfOrders;
+                }
+                        
+                    doc.NoOfOrders = noOfOrders;
+                    doc.save();
+
+            }
+            
+            return res.send({success:true,message:"Successfully updated"});
+
+    } catch (error) {
+       return  res.send({status:false, message:"Technical error"})
+
+    }
 })
+
+
+
+
+// Start the server
+app.listen(PORT, function() {
+  console.log("Listening on port " + PORT + ".");
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
